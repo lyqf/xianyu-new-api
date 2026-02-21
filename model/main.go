@@ -65,6 +65,27 @@ var DB *gorm.DB
 
 var LOG_DB *gorm.DB
 
+// buildDSNFromEnv builds MySQL DSN from individual MYSQL_ env vars (Zeabur support)
+// Supports: MYSQL_HOST, MYSQL_PORT, MYSQL_USERNAME, MYSQL_PASSWORD, MYSQL_DATABASE
+func buildDSNFromEnv() string {
+	host := os.Getenv("MYSQL_HOST")
+	if host == "" {
+		return ""
+	}
+	port := os.Getenv("MYSQL_PORT")
+	if port == "" {
+		port = "3306"
+	}
+	username := os.Getenv("MYSQL_USERNAME")
+	password := os.Getenv("MYSQL_PASSWORD")
+	database := os.Getenv("MYSQL_DATABASE")
+
+	// MySQL DSN format: username:password@tcp(host:port)/database
+	dsn := username + ":" + password + "@tcp(" + host + ":" + port + ")/" + database
+	common.SysLog("built DSN from MYSQL_ env vars: " + username + ":***@tcp(" + host + ":" + port + ")/" + database)
+	return dsn
+}
+
 func createRootAccountIfNeed() error {
 	var user User
 	//if user.Status != common.UserStatusEnabled {
@@ -120,6 +141,11 @@ func chooseDB(envName string, isLog bool) (*gorm.DB, error) {
 		initCol()
 	}()
 	dsn := os.Getenv(envName)
+
+	// Zeabur support: build DSN from individual MYSQL_ env vars if SQL_DSN is not set
+	if dsn == "" && envName == "SQL_DSN" {
+		dsn = buildDSNFromEnv()
+	}
 	if dsn != "" {
 		if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
 			// Use PostgreSQL
