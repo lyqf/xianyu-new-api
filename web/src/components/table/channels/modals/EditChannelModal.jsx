@@ -171,6 +171,8 @@ const EditChannelModal = (props) => {
     disable_store: false, // false = 允许透传（默认开启）
     allow_safety_identifier: false,
     claude_beta_query: false,
+    // Claude 1h缓存创建倍率乘数（默认1.6，设为1则1h和5m同价）
+    claude_cache_creation_1h_multiplier: 1.6,
   };
   const [batch, setBatch] = useState(false);
   const [multiToSingle, setMultiToSingle] = useState(false);
@@ -635,6 +637,9 @@ const EditChannelModal = (props) => {
           data.allow_safety_identifier =
             parsedSettings.allow_safety_identifier || false;
           data.claude_beta_query = parsedSettings.claude_beta_query || false;
+          // Claude 1h缓存创建倍率乘数，默认1.6
+          data.claude_cache_creation_1h_multiplier =
+            parsedSettings.claude_cache_creation_1h_multiplier ?? 1.6;
         } catch (error) {
           console.error('解析其他设置失败:', error);
           data.azure_responses_version = '';
@@ -646,6 +651,7 @@ const EditChannelModal = (props) => {
           data.disable_store = false;
           data.allow_safety_identifier = false;
           data.claude_beta_query = false;
+          data.claude_cache_creation_1h_multiplier = 1.6;
         }
       } else {
         // 兼容历史数据：老渠道没有 settings 时，默认按 json 展示
@@ -656,6 +662,7 @@ const EditChannelModal = (props) => {
         data.disable_store = false;
         data.allow_safety_identifier = false;
         data.claude_beta_query = false;
+        data.claude_cache_creation_1h_multiplier = 1.6;
       }
 
       if (
@@ -1400,6 +1407,9 @@ const EditChannelModal = (props) => {
       }
       if (localInputs.type === 14) {
         settings.claude_beta_query = localInputs.claude_beta_query === true;
+        // Claude 1h缓存创建倍率乘数
+        const multiplier = parseFloat(localInputs.claude_cache_creation_1h_multiplier);
+        settings.claude_cache_creation_1h_multiplier = isNaN(multiplier) ? 1.6 : multiplier;
       }
     }
 
@@ -1422,6 +1432,7 @@ const EditChannelModal = (props) => {
     delete localInputs.disable_store;
     delete localInputs.allow_safety_identifier;
     delete localInputs.claude_beta_query;
+    delete localInputs.claude_cache_creation_1h_multiplier;
 
     let res;
     localInputs.auto_ban = localInputs.auto_ban ? 1 : 0;
@@ -3325,21 +3336,40 @@ const EditChannelModal = (props) => {
                     </div>
 
                     {inputs.type === 14 && (
-                      <Form.Switch
-                        field='claude_beta_query'
-                        label={t('Claude 强制 beta=true')}
-                        checkedText={t('开')}
-                        uncheckedText={t('关')}
-                        onChange={(value) =>
-                          handleChannelOtherSettingsChange(
-                            'claude_beta_query',
-                            value,
-                          )
-                        }
-                        extraText={t(
-                          '开启后，该渠道请求 Claude 时将强制追加 ?beta=true（无需客户端手动传参）',
-                        )}
-                      />
+                      <>
+                        <Form.Switch
+                          field='claude_beta_query'
+                          label={t('Claude 强制 beta=true')}
+                          checkedText={t('开')}
+                          uncheckedText={t('关')}
+                          onChange={(value) =>
+                            handleChannelOtherSettingsChange(
+                              'claude_beta_query',
+                              value,
+                            )
+                          }
+                          extraText={t(
+                            '开启后，该渠道请求 Claude 时将强制追加 ?beta=true（无需客户端手动传参）',
+                          )}
+                        />
+                        <Form.Input
+                          field='claude_cache_creation_1h_multiplier'
+                          label={t('Claude 1h缓存创建倍率乘数')}
+                          type='number'
+                          step={0.1}
+                          min={0}
+                          placeholder='1.6'
+                          onChange={(value) =>
+                            handleChannelOtherSettingsChange(
+                              'claude_cache_creation_1h_multiplier',
+                              parseFloat(value) || 1.6,
+                            )
+                          }
+                          extraText={t(
+                            '1h缓存创建倍率 = 基础倍率 × 此乘数。默认1.6（官方定价），设为1则1h和5m同价',
+                          )}
+                        />
+                      </>
                     )}
 
                     {inputs.type === 1 && (

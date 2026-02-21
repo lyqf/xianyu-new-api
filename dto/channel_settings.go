@@ -32,6 +32,8 @@ type ChannelOtherSettings struct {
 	DisableStore          bool          `json:"disable_store,omitempty"`           // 是否禁用 store 透传（默认允许透传，禁用后可能导致 Codex 无法使用）
 	AllowSafetyIdentifier bool          `json:"allow_safety_identifier,omitempty"` // 是否允许 safety_identifier 透传（默认过滤以保护用户隐私）
 	AwsKeyType            AwsKeyType    `json:"aws_key_type,omitempty"`
+	// Claude 1h缓存创建倍率乘数，默认1.6倍（true），设为false则1h和5m使用相同倍率
+	ClaudeCacheCreation1hMultiplier *float64 `json:"claude_cache_creation_1h_multiplier,omitempty"`
 }
 
 func (s *ChannelOtherSettings) IsOpenRouterEnterprise() bool {
@@ -39,4 +41,12 @@ func (s *ChannelOtherSettings) IsOpenRouterEnterprise() bool {
 		return false
 	}
 	return *s.OpenRouterEnterprise
+}
+
+// GetClaudeCacheCreation1hMultiplier 获取1h缓存创建倍率乘数，默认1.6
+func (s *ChannelOtherSettings) GetClaudeCacheCreation1hMultiplier() float64 {
+	if s == nil || s.ClaudeCacheCreation1hMultiplier == nil {
+		return 1.6 // 默认1.6倍
+	}
+	return *s.ClaudeCacheCreation1hMultiplier
 }
